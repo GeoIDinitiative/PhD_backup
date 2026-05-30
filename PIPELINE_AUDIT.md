@@ -71,3 +71,31 @@ intended, now stated.
 | ECPN, EEC1 | ingv | `east` | `mag` |
 | EC10, ECIT, ECOR, EMAS | experiment | `x` | `mag` |
 | EC1 | experiment | `x` | √(x²+y²) (computed) |
+
+## 5. Results & the credibility finding (run 2026-05-29)
+
+Stage 1 (`build_clean_bandpassed.py`, ~9 s) and Stage 3 (`swcc_comprehensive.py`, ~6 s; old loop
+would have taken hours) both ran clean. Numerical-equivalence gate vs the old loop: **max|Δr| =
+3e-16** (machine precision) — the vectorised SWCC is exact.
+
+**Headline credibility result — the r=0.2 threshold is not significant.** The phase-randomised
+null test (`credibility/null_test.*`) shows that a surrogate with the *same power spectrum but
+random phase* routinely reaches **max|r| ≈ 0.5**, with a **99th-percentile floor of ≈ 0.61
+(ingv) / 0.65 (experiment)**, and yields ~61 supra-0.2 "peaks" per surrogate. Cause: in the narrow
+0.001–0.01 Hz band a ~3334-s template has only ~30 independent DOF, so chance Pearson r is large.
+
+Flagging every detected peak against this empirical floor (`flag_significant_peaks.py` →
+`all_peaks_flagged.csv`, `significance_summary.txt`):
+
+| metric | value |
+|--------|-------|
+| total peaks (r>0.2, all stations/components) | 15 500 |
+| peaks surviving the 99th-pct null floor | **167 (1.1 %)** |
+| strongest stations | EMAS (8–12 % significant), ECOR (3–6 %) |
+| weakest | EEC1, most experiment stations ≈ 0 %; ECPN 0.2–0.3 % |
+
+**Implication for the thesis:** detections must be reported against the null floor (|r| ≳ 0.6),
+not the nominal 0.2 threshold; under that criterion the genuine template matches are concentrated
+at **EMAS and ECOR**. Magnitude vs directional components perform comparably (median |r| within
+~0.01), so neither is clearly superior — report both. The old single-pass r=0.2 peak lists are
+dominated by chance narrowband alignment and should not be used as a detection criterion.
