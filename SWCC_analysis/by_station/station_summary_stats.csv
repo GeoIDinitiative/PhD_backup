@@ -1,0 +1,10 @@
+,,corr_mean_clean,corr_mean_clean,corr_mean_clean,snr_mean_db_clean,snr_mean_db_clean,snr_mean_db_clean,n_peaks_clean,pct_peaks_lost,n_peaks_above_0.7_clean
+,,mean,std,max,mean,std,max,sum,mean,sum
+dataset,station,,,,,,,,,
+experiment,EC1,0.1077,0.0232,0.1332,-0.2261,0.0814,0.0358,3260,42.7132,1
+experiment,EC10,0.1051,0.0215,0.12,-0.2526,0.3496,0.8046,2575,44.112,0
+experiment,ECIT,0.1028,0.0218,0.1208,-0.1431,0.2834,0.6318,3083,45.2745,0
+experiment,ECOR,0.1003,0.0227,0.1207,-0.5457,0.1732,-0.1375,3224,43.3143,2
+experiment,EMAS,0.0945,0.0214,0.1232,-1.2973,0.3684,-0.3337,3334,45.1177,1
+ingv,EC1,0.1026,0.0214,0.1181,-0.5306,0.3852,0.6967,24750,48.8234,1
+ingv,ECPN,0.1206,0.0284,0.1505,-0.5669,0.1611,-0.0368,31934,48.894,4

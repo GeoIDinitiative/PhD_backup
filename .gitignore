@@ -1,0 +1,21 @@
+# ── Large regenerable data exports (excluded from backup) ────────────────
+bandpassed_exports_001_01_csv_only_utc/
+SWCC_utc_fixed/
+tilt_raw_pwave_removed/
+comprehensive_analysis/
+synchronous_events/
+clean_bandpassed/
+SWCC_comprehensive/
+
+# ── Large generated plot/output trees ───────────────────────────────────
+utc_check/outputs/
+utc_check/outputs_raw/
+
+# ── Python caches ───────────────────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+
+# ── OS / editor cruft ───────────────────────────────────────────────────
+.DS_Store
+.ipynb_checkpoints/

@@ -1,0 +1,7 @@
+,corr_mean_clean,corr_mean_clean,corr_mean_clean,snr_mean_db_clean,snr_mean_db_clean,snr_mean_db_clean,n_peaks_clean,pct_peaks_lost
+,mean,std,max,mean,std,max,sum,mean
+template,,,,,,,,
+template1,0.1137,0.0106,0.1404,-0.6199,0.3861,-0.2296,23227,44.9896
+template2,0.118,0.012,0.1491,-0.5813,0.3663,-0.1718,21285,44.755
+template3,0.119,0.0125,0.1505,-0.5661,0.3546,-0.1349,21613,45.1792
+template4,0.0686,0.0071,0.0874,-0.2684,0.5929,0.8046,6035,46.9328

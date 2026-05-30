@@ -1,0 +1,5 @@
+,corr_mean_clean,corr_mean_clean,corr_mean_clean,snr_mean_db_clean,snr_mean_db_clean,snr_mean_db_clean,n_peaks_clean,n_peaks_contaminated,pct_peaks_lost
+,mean,std,max,mean,std,max,sum,sum,mean
+dataset,,,,,,,,,
+experiment,0.1021,0.022,0.1332,-0.493,0.5037,0.8046,15476,27459,44.1064
+ingv,0.1116,0.0263,0.1505,-0.5488,0.291,0.6967,56684,110459,48.8587

@@ -1,0 +1,7 @@
+,peak_corr,peak_corr,peak_corr,peak_corr,peak_corr,snr_db,snr_db,snr_db,snr_db
+,count,mean,std,median,max,mean,std,median,max
+template,,,,,,,,,
+template1,23227,0.3131,0.0784,0.3006,0.8054,-0.6754,3.9337,-0.3796,45.7016
+template2,21285,0.3058,0.0778,0.2913,0.7463,-0.6061,4.108,-0.3701,45.769
+template3,21613,0.3126,0.0809,0.2983,0.7723,-0.6105,4.1661,-0.3444,45.756
+template4,6035,0.2418,0.0386,0.2311,0.6597,-0.3062,4.7331,-0.111,40.6179

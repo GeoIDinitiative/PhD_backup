@@ -1,0 +1,11 @@
+Metric,Value
+Total Peaks,72160.0
+Mean Correlation,0.3048531032330596
+Std Correlation,0.07887420032374878
+Median Correlation,0.28950408960869356
+Mean SNR (dB),-0.6046505306890781
+Std SNR (dB),4.127837130319551
+Median SNR (dB),-0.3395103351527774
+Moderate Corr (0.2-0.5),70569.0
+High Corr (0.5-0.7),1582.0
+Very High Corr (>0.7),9.0
