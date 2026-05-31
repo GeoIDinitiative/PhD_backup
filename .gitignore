@@ -12,6 +12,8 @@ SWCC_comprehensive/
 utc_check/outputs/
 utc_check/outputs_raw/
 pipeline_improvements/
+gw_methods/
+correlation_battery/
 
 # ── Python caches ───────────────────────────────────────────────────────
 __pycache__/

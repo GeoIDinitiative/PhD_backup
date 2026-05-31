@@ -70,17 +70,16 @@ def detect(gt, score, veto, fdet, fsig, M=PEAK_SEP):
     significant) time lists, both after the veto + coda-safety filters."""
     s = np.where(np.isfinite(score), score, 0.0)
     pk, _ = find_peaks(s, height=fdet, distance=PEAK_SEP)   # min detection = null floor
-    det, sig = [], []
+    recs = []
     for i in pk:
         if veto[i:min(i+M, len(veto))].any():       # window overlaps a veto zone
             continue
         t = gt[i]
         if near_coda(t):                              # coda safety
             continue
-        det.append(pd.Timestamp(t))
-        if score[i] > fsig:
-            sig.append(pd.Timestamp(t))
-    return det, sig
+        recs.append({"peak_time": pd.Timestamp(t), "score": float(score[i]),
+                     "significant": bool(score[i] > fsig)})
+    return recs
 
 
 def null_floor(host, ds, st, n=N_NULL, seed=5):
@@ -124,7 +123,7 @@ def main():
     # cache scores + detections (synchrony uses the SIGNIFICANT set)
     det = {m: {ds: {} for ds in STATIONS} for m in ("max", "stack")}
     spans = {ds: {} for ds in STATIONS}
-    usage, counts = [], []
+    usage, counts, all_dets = [], [], []
     for ds, sts in STATIONS.items():
         for st in sts:
             per_st_times = {"max": [], "stack": []}
@@ -141,11 +140,20 @@ def main():
                 fin = np.isfinite(gx) & ~gv
                 host = gx[fin][:20000] if fin.sum() > 20000 else gx[fin]
                 (m95, m99), (s95, s99) = null_floor(host, ds, st)
-                dM, sM = detect(gt, M, gv, m95, m99)
-                dS, sS = detect(gt, S, gv, s95, s99)
+                dM = detect(gt, M, gv, m95, m99)
+                dS = detect(gt, S, gv, s95, s99)
+                sM = [r["peak_time"] for r in dM if r["significant"]]
+                sS = [r["peak_time"] for r in dS if r["significant"]]
                 per_st_times["max"].append(pd.Series(sM))
                 per_st_times["stack"].append(pd.Series(sS))
                 spans[ds][st] = (gt[0], gt[-1])
+                for method, recs, f95, f99 in [("max", dM, m95, m99), ("stack", dS, s95, s99)]:
+                    for r in recs:
+                        all_dets.append({"dataset": ds, "station": st, "component": comp,
+                                         "method": method, "peak_time": r["peak_time"],
+                                         "score": round(r["score"], 4),
+                                         "floor_detect": round(f95, 3), "floor_signif": round(f99, 3),
+                                         "significant": r["significant"]})
                 counts.append({"dataset": ds, "station": st, "component": comp,
                                "max_detect": len(dM), "max_signif": len(sM),
                                "stack_detect": len(dS), "stack_signif": len(sS),
@@ -164,7 +172,9 @@ def main():
                             keep.append(x)
                     det[m][ds][st] = pd.to_datetime(pd.Series(keep))
         print(f"   detected {ds}")
-    pd.DataFrame(counts).to_csv(OUT / f"detect_counts{'' if CODA_VETO_ON else '_nocoda'}.csv", index=False)
+    sfx0 = '' if CODA_VETO_ON else '_nocoda'
+    pd.DataFrame(counts).to_csv(OUT / f"detect_counts{sfx0}.csv", index=False)
+    pd.DataFrame(all_dets).to_csv(OUT / f"all_detections_continuous{sfx0}.csv", index=False)
 
     L.append("(1) SIGNAL USAGE (continuous):")
     u = pd.DataFrame(usage)
@@ -182,13 +192,17 @@ def main():
 
     fig, axes = plt.subplots(1, 2, figsize=(14, 5))
     rng = np.random.default_rng(11)
+    sync_rows = []
     for col, method in enumerate(["max", "stack"]):
         L.append(f"(2) SYNCHRONY — METHOD {method.upper()}")
         for ds in STATIONS:
             stt = {k: v for k, v in det[method][ds].items() if len(v)}
             ndet = {k: len(v) for k, v in stt.items()}
             if len(stt) < 2:
-                L.append(f"   {ds}: <2 stations with detections ({ndet})"); continue
+                L.append(f"   {ds}: <2 stations with detections ({ndet})")
+                sync_rows.append({"dataset": ds, "method": method, "n_stations": len(stt),
+                                  "observed": 0, "chance": np.nan, "p": np.nan})
+                continue
             obs = count_coincidences(stt)
             null = np.empty(N_PERM)
             for k in range(N_PERM):
@@ -201,6 +215,8 @@ def main():
                     sh[st] = pd.to_datetime(pd.Timestamp(t0)+pd.to_timedelta(nt, unit="s"))
                 null[k] = count_coincidences(sh)
             p = float((null >= obs).mean())
+            sync_rows.append({"dataset": ds, "method": method, "n_stations": len(stt),
+                              "observed": obs, "chance": round(float(null.mean()), 3), "p": p})
             L.append(f"   {ds:11s}: observed={obs} chance={null.mean():.2f} p={p:.4f}  det/station={ndet}")
             axes[col].hist(null, bins=range(0, max(6, obs+2)), alpha=0.5, label=f"{ds} chance")
             axes[col].axvline(obs, ls="--", lw=2, label=f"{ds} obs={obs} (p={p:.3f})")
@@ -209,6 +225,7 @@ def main():
         L.append("")
 
     sfx = "" if CODA_VETO_ON else "_nocoda"
+    pd.DataFrame(sync_rows).to_csv(OUT / f"synchrony{sfx}.csv", index=False)
     fig.tight_layout(); fig.savefig(OUT / f"synchrony{sfx}.png", dpi=140); plt.close(fig)
     (OUT / f"summary{sfx}.txt").write_text("\n".join(L))
     print("\n".join(L)); print(f"\nOutputs → {OUT}")

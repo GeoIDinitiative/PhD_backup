@@ -25,7 +25,8 @@ import json
 import numpy as np
 import pandas as pd
 from pathlib import Path
-from scipy.signal import butter, sosfiltfilt, detrend as scipy_detrend
+from scipy.signal import butter, sosfiltfilt, detrend as scipy_detrend, hilbert, find_peaks
+from scipy.ndimage import uniform_filter1d
 
 from build_clean_bandpassed import hampel_despike
 from pwave_buffer import calculate_pwave_buffers
@@ -76,6 +77,32 @@ def veto_window(mag, dist):
             return 60, 4*60          # ±~4 h
     pre, post = calculate_pwave_buffers(dist, mag)
     return pre, post
+
+
+# ── data-driven contamination veto (in-band STA/LTA, validated against the catalogue) ──
+DD_STA, DD_LTA, DD_TRIG, DD_TOL = 600, 6000, 4.0, 1800   # s ; STA/LTA windows, trigger, EQ-match tol
+DD_PRE, DD_POST = 600, 1800                              # s ; veto buffer around a confirmed anomaly
+
+
+def data_driven_veto(x_grid, gi, eq, t0, t1):
+    """Veto windows where the IN-BAND (0.001-0.01 Hz) signal is anomalous (STA/LTA trigger)
+    AND a catalogued earthquake is nearby — i.e. earthquakes the detectability model misses
+    but that demonstrably reach the template band. Data-only anomalies (no nearby EQ) are
+    left alone (they are the real-signal candidates the search is for)."""
+    bp = sosfiltfilt(SOS, np.nan_to_num(x_grid - np.nanmean(x_grid)))
+    cf = np.abs(hilbert(bp)) ** 2
+    ratio = uniform_filter1d(cf, DD_STA, mode="nearest") / (uniform_filter1d(cf, DD_LTA, mode="nearest") + 1e-30)
+    pk, _ = find_peaks(ratio, height=DD_TRIG, distance=DD_TOL)
+    etas = eq[(eq.p_wave_eta >= t0) & (eq.p_wave_eta <= t1)]["p_wave_eta"].to_numpy()
+    if len(pk) == 0 or len(etas) == 0:
+        return []
+    iv = []
+    for i in pk:
+        ti = gi[i]
+        if np.min(np.abs((ti - etas) / np.timedelta64(1, "s"))) <= DD_TOL:   # earthquake-coincident
+            iv.append((pd.Timestamp(ti) - pd.Timedelta(seconds=DD_PRE),
+                       pd.Timestamp(ti) + pd.Timedelta(seconds=DD_POST)))
+    return iv
 
 
 def detectable_intervals(eq, t0, t1):
@@ -133,6 +160,13 @@ def process(station, which, eq):
         veto[lo:hi] = True
 
     x = s.to_numpy()
+    # data-driven veto: in-band anomalies coincident with catalogued earthquakes (model misses these)
+    n_model = int(veto.sum())
+    for a, b in data_driven_veto(x, gi, eq, t0, t1):
+        lo = np.searchsorted(gi, np.datetime64(a)); hi = np.searchsorted(gi, np.datetime64(b), "right")
+        veto[lo:hi] = True
+    n_dd = int(veto.sum()) - n_model
+
     interp = (~real) | veto                          # samples that will be filled
     x[veto] = np.nan                                 # drop detectable-quake transients before fill
 
@@ -189,7 +223,7 @@ def process(station, which, eq):
         "veto": veto[keep] | edge[keep],             # veto = detectable-quake OR block-edge settling
     })
     stats = dict(src=src, ds=ds, n_grid=len(grid), n_real=int(real.sum()),
-                 n_out=int(keep.sum()), n_blocks=bid, n_det=len(det_iv),
+                 n_out=int(keep.sum()), n_blocks=bid, n_det=len(det_iv), dd_samples=n_dd,
                  pct_veto=100*veto[keep].sum()/max(keep.sum(),1),
                  pct_interp=100*interp[keep].sum()/max(keep.sum(),1))
     return res, stats

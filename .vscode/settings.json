@@ -1,0 +1,46 @@
+{
+  "// note": "Excludes large GENERATED data/outputs from VS Code's file-watcher, search, and Pylance indexing. Does not touch the files themselves; delete this to revert.",
+
+  "files.watcherExclude": {
+    "**/continuous_bandpassed/**": true,
+    "**/clean_bandpassed/**": true,
+    "**/tilt_raw_pwave_removed/**": true,
+    "**/bandpassed_exports_001_01_csv_only_utc/**": true,
+    "**/SWCC_comprehensive/**": true,
+    "**/SWCC_utc_fixed/**": true,
+    "**/SWCC_analysis/**": true,
+    "**/comprehensive_analysis/**": true,
+    "**/synchronous_events/**": true,
+    "**/wavelet_analysis/**": true,
+    "**/pipeline_improvements/**": true,
+    "**/top40_sst_plots/**": true,
+    "**/utc_check/outputs*/**": true,
+    "**/__pycache__/**": true
+  },
+
+  "search.exclude": {
+    "**/continuous_bandpassed/**": true,
+    "**/clean_bandpassed/**": true,
+    "**/tilt_raw_pwave_removed/**": true,
+    "**/bandpassed_exports_001_01_csv_only_utc/**": true,
+    "**/SWCC_comprehensive/**": true,
+    "**/SWCC_utc_fixed/**": true,
+    "**/comprehensive_analysis/**": true,
+    "**/synchronous_events/**": true,
+    "**/wavelet_analysis/**": true,
+    "**/pipeline_improvements/**": true,
+    "**/utc_check/outputs*/**": true
+  },
+
+  "python.analysis.exclude": [
+    "**/continuous_bandpassed/**",
+    "**/clean_bandpassed/**",
+    "**/tilt_raw_pwave_removed/**",
+    "**/bandpassed_exports_001_01_csv_only_utc/**",
+    "**/SWCC_comprehensive/**",
+    "**/comprehensive_analysis/**",
+    "**/synchronous_events/**"
+  ],
+  "python.analysis.indexing": true,
+  "python.analysis.userFileIndexingLimit": 2000
+}
