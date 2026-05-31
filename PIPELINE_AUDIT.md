@@ -84,18 +84,46 @@ random phase* routinely reaches **max|r| ≈ 0.5**, with a **99th-percentile flo
 (ingv) / 0.65 (experiment)**, and yields ~61 supra-0.2 "peaks" per surrogate. Cause: in the narrow
 0.001–0.01 Hz band a ~3334-s template has only ~30 independent DOF, so chance Pearson r is large.
 
-Flagging every detected peak against this empirical floor (`flag_significant_peaks.py` →
-`all_peaks_flagged.csv`, `significance_summary.txt`):
+**Edge-handling correction (important).** The first significance pass reported 167 survivors with
+14 synchronous EMAS↔ECOR events at |r| up to 0.91. Investigating the per-segment filter startup
+spike showed these were **edge transients**: a fresh 0.001–0.01 Hz filter (settling ≈1716 s) starts
+at every gap boundary and rings up into a smooth low-frequency swing that correlates strongly with
+the (smooth) templates. Because segments begin at *shared* earthquake-excision boundaries, those
+transients align across stations and faked "synchrony" (all earlier sync events fell within 20 min
+of a segment start). Edge handling was tested across methods; **even-reflection padding**
+(`sosfiltfilt padtype="even", padlen=settling`) reduces both-end edge inflation to ≈1.0× without
+distorting waveform shape (odd padding blew the *end* up ~7.5×; Tukey tapering distorts shape).
 
-| metric | value |
-|--------|-------|
-| total peaks (r>0.2, all stations/components) | 15 500 |
-| peaks surviving the 99th-pct null floor | **167 (1.1 %)** |
-| strongest stations | EMAS (8–12 % significant), ECOR (3–6 %) |
-| weakest | EEC1, most experiment stations ≈ 0 %; ECPN 0.2–0.3 % |
+Final significance with corrected edges (`all_peaks_flagged.csv`, `significance_summary.txt`):
 
-**Implication for the thesis:** detections must be reported against the null floor (|r| ≳ 0.6),
-not the nominal 0.2 threshold; under that criterion the genuine template matches are concentrated
-at **EMAS and ECOR**. Magnitude vs directional components perform comparably (median |r| within
-~0.01), so neither is clearly superior — report both. The old single-pass r=0.2 peak lists are
-dominated by chance narrowband alignment and should not be used as a detection criterion.
+| metric | default-pad (initial) | **even-pad (correct)** |
+|--------|----------------------|------------------------|
+| total peaks | 15 500 | 14 976 |
+| survivors of 99th-pct null floor | 167 (1.1 %) | **37 (0.25 %)** |
+| cross-station synchronous events | 14 (EMAS↔ECOR, \|r\|→0.91) | **2 (weak, \|r\|≈0.52–0.55)** |
+| max \|r\| | 0.93 | **0.66** |
+
+**Implication for the thesis (revised, honest):** once edge transients are removed, there is
+**little credible evidence** of strong template-matched tilt transients. Survivors are sparse and
+sit *just* above the null floor (ECPN winter |r|≈0.63–0.66 vs floor 0.626; experiment |r|≈0.52–0.59
+vs floor 0.515), and cross-station coincidence essentially vanishes (2 weak events). The earlier
+"EMAS/ECOR synchronous detections" were a processing artefact, not signal. This is the corrected
+result; the null floor + clean edges together are what make it trustworthy. Magnitude vs
+directional remain comparable.
+
+## 6. template4 (long template) — separate procedure
+
+template4 is **10,001 samples (~2.8 h)**, 3× longer than templates 1–3 (~3,333). It cannot be
+hosted by the short post-excision segments (median ~83 min), so it is removed from the main SWCC
+(`TEMPLATES = T1–3`) and run by `swcc_template4.py` with matched parameters: window = its own
+length, peak spacing 3,000, and a **T4-specific null floor**. Results are merged into
+`all_peaks_flagged.csv` tagged `procedure="T4_long"` vs `"main_T1-3"`.
+
+Coverage is intrinsically tiny: **0 experiment segments** are ≥10,001 samples (T4 not evaluable
+there) and only **2 per INGV station**. The T4 null floor is **0.336** — far below the T1–3 floor
+(0.626), because a longer template has more degrees of freedom and thus a lower chance-correlation
+baseline (judging T4 against the T1–3 floor would have been wrong). Even so, the 12 T4 peaks
+(max |r| 0.32) all fall **below** their own floor → **0 significant**. Conclusion: T4 adds no
+credible detections on the current (heavily fragmented) data; making it useful would require
+longer segments, i.e. gentler P-wave excision. (Corrects an earlier mistaken note that template4
+was "flat/degenerate" — it is simply too long for the segments.)

@@ -41,7 +41,10 @@ FS            = 1.0
 SNR_GUARD_S   = 600.0         # shorter than old (segments are short after excision)
 SNR_HALFWIN_S = 2000.0
 SIMS      = ["sim1", "sim2", "sim3", "sim4"]
-TEMPLATES = ["template1", "template2", "template3", "template4"]
+# template4 (~10,001 samples, ~2.8 h) is handled separately by swcc_template4.py:
+# it is too long to fit the short post-excision segments, so it needs its own
+# long-segment procedure (different window length, peak spacing and null floor).
+TEMPLATES = ["template1", "template2", "template3"]
 
 STATIONS = {
     "ingv":       ["ECPN", "EEC1"],
@@ -196,18 +199,23 @@ def run_station_component(dataset, station, comp_tag):
                 if len(sig) < M:
                     continue
                 seg_dt = seg_df["datetime"].to_numpy()
+                edge = (seg_df["edge"].to_numpy(bool) if "edge" in seg_df.columns
+                        else np.zeros(len(sig), bool))
                 r = swcc_segment(tpl, sig)
                 if r.size == 0:
                     continue
                 peaks, props = find_peaks(np.abs(r), height=THRESHOLD,
                                           distance=PEAK_DISTANCE)
                 for pk in peaks:
+                    # window spans [pk, pk+M): edge-contaminated if it overlaps a settling zone
+                    in_edge = bool(edge[pk:min(pk + M, len(edge))].any())
                     peak_rows.append({
                         "dataset": dataset, "station": station, "component": comp_tag,
                         "sim": sim, "template": tname, "segment_id": int(sid),
                         "peak_time": pd.Timestamp(seg_dt[pk]),
                         "r": float(r[pk]), "abs_r": float(abs(r[pk])),
                         "snr_db": float(template_snr(sig, int(pk), M)),
+                        "in_edge": in_edge,
                     })
     pk_df = pd.DataFrame(peak_rows)
     out_sub = OUT_DIR / dataset

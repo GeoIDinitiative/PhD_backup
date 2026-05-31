@@ -43,6 +43,7 @@ GAP_SEC         = 1.5         # split into a new segment when spacing exceeds th
 MIN_SEG_SAMPLES = 4000        # ~4000 s; must exceed filter settling to bandpass cleanly
 DESPIKE_WIN     = 31          # rolling window (samples) for Hampel median/MAD
 DESPIKE_K       = 6.0         # outlier if |x-med| > K * 1.4826 * MAD
+EDGE_SETTLE_S   = 1716        # filter settling length (s); used for odd-pad + edge flag
 
 # ── station → (dataset, directional_col) ; magnitude handled separately ──────--
 STATIONS = {
@@ -116,7 +117,7 @@ def process_component(df, station, component):
     seconds = (df["datetime"] - df["datetime"].iloc[0]).dt.total_seconds().to_numpy(float)
 
     segs = segment_indices(seconds)
-    out_dt, out_sec, out_bp, out_sid = [], [], [], []
+    out_dt, out_sec, out_bp, out_sid, out_edge = [], [], [], [], []
     n_spikes = 0
     n_used = n_dropped = 0
     seg_id = 0
@@ -136,12 +137,24 @@ def process_component(df, station, component):
         x, ns = hampel_despike(x)
         n_spikes += ns
         x = scipy_detrend(x, type="linear")
-        xf = sosfiltfilt(SOS, x)
+        # even-reflection padding by ~one settling length suppresses the edge transient
+        # at BOTH ends. (Even, not odd: odd padding doubles a non-zero edge value and can
+        # blow the end transient up ~7x on noisy data; even mirrors within the data range
+        # and is stable. Tukey tapering kills transients better still but distorts the
+        # waveform shape the SWCC matches, so it is avoided here.)
+        padlen = min(EDGE_SETTLE_S, seg_len - 1)
+        xf = sosfiltfilt(SOS, x, padtype="even", padlen=padlen)
+        # flag the (still slightly unreliable) settling zones at each segment end
+        edge = np.zeros(seg_len, dtype=bool)
+        e = min(EDGE_SETTLE_S, seg_len)
+        edge[:e] = True
+        edge[seg_len - e:] = True
 
         out_dt.append(dt[a:b])
         out_sec.append(seconds[a:b])
         out_bp.append(xf)
         out_sid.append(np.full(seg_len, seg_id, dtype=int))
+        out_edge.append(edge)
         seg_id += 1
         n_used += 1
 
@@ -154,6 +167,7 @@ def process_component(df, station, component):
         "time_seconds": np.concatenate(out_sec),
         "bandpassed":   np.concatenate(out_bp),
         "segment_id":   np.concatenate(out_sid),
+        "edge":         np.concatenate(out_edge),
     })
     stats = dict(src_col=src_col, n_seg=len(segs), n_used=n_used, n_dropped=n_dropped,
                  n_spikes=n_spikes, n_out=len(out_df))
@@ -200,10 +214,11 @@ def main():
                 "butter_order": ORDER, "method": "per-segment detrend+Hampel+sosfiltfilt",
                 "gap_split_s": GAP_SEC, "min_segment_samples": MIN_SEG_SAMPLES,
                 "despike_window": DESPIKE_WIN, "despike_k": DESPIKE_K,
+                "edge_settle_s": EDGE_SETTLE_S, "pad": "even-reflection, padlen=settling",
                 "n_segments_total": st["n_seg"], "n_segments_used": st["n_used"],
                 "n_segments_dropped": st["n_dropped"], "n_spikes_replaced": st["n_spikes"],
                 "n_output_rows": st["n_out"],
-                "columns": ["datetime", "time_seconds", "bandpassed", "segment_id"],
+                "columns": ["datetime", "time_seconds", "bandpassed", "segment_id", "edge"],
             }
             base.with_suffix(".meta.json").write_text(json.dumps(meta, indent=2))
         summary.append("")

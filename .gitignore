@@ -5,11 +5,13 @@ tilt_raw_pwave_removed/
 comprehensive_analysis/
 synchronous_events/
 clean_bandpassed/
+continuous_bandpassed/
 SWCC_comprehensive/
 
 # ── Large generated plot/output trees ───────────────────────────────────
 utc_check/outputs/
 utc_check/outputs_raw/
+pipeline_improvements/
 
 # ── Python caches ───────────────────────────────────────────────────────
 __pycache__/
